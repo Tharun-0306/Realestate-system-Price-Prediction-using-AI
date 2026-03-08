@@ -64,6 +64,9 @@ class MarketTrend(BaseModel):
 
 # ─── ML Model ─────────────────────────
 
+# (copy rest of main.py functions here as above)
+
+
 def predict_price(features: dict) -> tuple:
     """
     Simulated ML model prediction.
@@ -96,6 +99,7 @@ def predict_price(features: dict) -> tuple:
     high = price * 1.08
     return price, low, high
 
+
 def get_feature_importance(features: dict) -> dict:
     total = features['sqft_living'] * 150
     return {
@@ -105,6 +109,7 @@ def get_feature_importance(features: dict) -> dict:
         "Bedrooms/Baths": round((features['bedrooms'] * 15000 + features['bathrooms'] * 12000) / max(1, total) * 100, 1),
         "Special Features": round((features['waterfront'] * 200000 + features['view'] * 25000) / max(1, total) * 100, 1),
     }
+
 
 def get_comparables(price: float, bedrooms: int, sqft: int) -> List[dict]:
     """Generate mock comparable properties."""

@@ -1,0 +1,22 @@
+# Real Estate Price Prediction API - Backend Dependencies
+
+# Web Framework
+fastapi==0.133.1
+uvicorn[standard]==0.46.0
+pydantic==2.12.5
+
+# Data Processing & ML
+pandas==3.0.1
+numpy==2.4.2
+scikit-learn==1.8.0
+joblib==1.5.3
+
+# Gradient Boosting Models
+xgboost==3.2.0
+lightgbm==4.6.0
+
+# Utilities
+python-dateutil==2.9.0.post0
+
+# Optional: for API documentation
+python-multipart==0.0.7
