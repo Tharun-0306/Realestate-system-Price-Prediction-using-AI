@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lexis — Intelligent Book Summarization Platform</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --ink:#0d0b07;--paper:#faf7f2;--aged:#f0ebe0;
+      --amber:#c8860a;--amber-light:#e8a92a;--amber-glow:rgba(200,134,10,0.13);
+      --rust:#8b3a1a;--sage:#3d5a47;--muted:#6b6355;
+      --border:rgba(13,11,7,0.12);--shadow:0 8px 40px rgba(13,11,7,0.1);
+    }
+    html,body,#root{min-height:100vh;}
+    body{background:var(--paper);font-family:'Crimson Pro',Georgia,serif;color:var(--ink);}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    @keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+    /* ── LOGIN ── */
+    .lp{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;}
+    .lp-left{position:relative;background:var(--ink);padding:56px 64px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;}
+    .lp-left::before{content:'';position:absolute;top:-120px;left:-120px;width:500px;height:500px;border-radius:50%;border:1px solid rgba(200,134,10,0.08);}
+    .lp-left::after{content:'';position:absolute;top:-60px;left:-60px;width:300px;height:300px;border-radius:50%;border:1px solid rgba(200,134,10,0.12);}
+    .lp-glow{position:absolute;top:30%;left:-30%;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(200,134,10,0.07) 0%,transparent 65%);pointer-events:none;}
+    .lp-grain{position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;}
+    .lp-logo-word{font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:var(--paper);letter-spacing:-.5px;position:relative;z-index:2;}
+    .lp-logo-word span{color:var(--amber);}
+    .lp-logo-tag{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3.5px;text-transform:uppercase;color:rgba(250,247,242,.35);margin-top:4px;position:relative;z-index:2;}
+    .lp-quote-mark{font-family:'Playfair Display',serif;font-size:96px;line-height:.7;color:var(--amber);opacity:.3;display:block;position:relative;z-index:2;}
+    .lp-quote-text{font-family:'Playfair Display',serif;font-size:clamp(20px,2.4vw,28px);font-style:italic;color:var(--paper);line-height:1.45;margin-bottom:20px;opacity:.88;position:relative;z-index:2;}
+    .lp-quote-author{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);position:relative;z-index:2;}
+    .lp-features{display:flex;flex-direction:column;gap:12px;position:relative;z-index:2;}
+    .lp-feat{display:flex;align-items:center;gap:12px;}
+    .lp-feat-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);flex-shrink:0;box-shadow:0 0 8px rgba(200,134,10,.6);}
+    .lp-feat-text{font-family:'Crimson Pro',serif;font-size:15px;color:rgba(250,247,242,.5);}
+    .lp-right{background:var(--paper);display:flex;align-items:center;justify-content:center;padding:48px 56px;position:relative;overflow-y:auto;}
+    .lp-corner{position:absolute;top:0;right:0;width:120px;height:120px;border-left:1px solid var(--border);border-bottom:1px solid var(--border);border-bottom-left-radius:120px;pointer-events:none;}
+    .form-card{width:100%;max-width:400px;animation:slideUp .5s .1s ease both;}
+    .fc-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3.5px;text-transform:uppercase;color:var(--amber);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+    .fc-eyebrow::before{content:'';width:28px;height:1px;background:var(--amber);}
+    .fc-title{font-family:'Playfair Display',serif;font-size:36px;font-weight:900;color:var(--ink);letter-spacing:-1px;line-height:1.1;margin-bottom:8px;}
+    .fc-title em{font-style:italic;color:var(--amber);}
+    .fc-sub{font-size:16px;color:var(--muted);font-weight:300;margin-bottom:28px;line-height:1.6;}
+    .tab-sw{display:flex;background:var(--aged);border-radius:6px;padding:3px;margin-bottom:24px;border:1px solid var(--border);}
+    .tab-sw-btn{flex:1;padding:9px;border:none;border-radius:4px;background:transparent;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:all .2s;}
+    .tab-sw-btn.active{background:white;color:var(--ink);box-shadow:0 2px 8px rgba(13,11,7,.08);}
+    .fields{display:flex;flex-direction:column;gap:16px;margin-bottom:20px;}
+    .name-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .fl{display:flex;flex-direction:column;gap:5px;}
+    .fl-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);}
+    .fi-wrap{position:relative;display:flex;align-items:center;}
+    .fi-icon{position:absolute;left:13px;font-size:13px;color:var(--muted);opacity:.55;pointer-events:none;}
+    .fi{width:100%;padding:11px 13px 11px 38px;border:1px solid var(--border);border-radius:5px;background:white;font-family:'Crimson Pro',serif;font-size:15.5px;color:var(--ink);outline:none;transition:border-color .2s,box-shadow .2s;}
+    .fi:focus{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-glow);}
+    .fi::placeholder{color:var(--muted);opacity:.35;}
+    .fi-eye{position:absolute;right:12px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--muted);opacity:.45;padding:0;}
+    .fi-err{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--rust);margin-top:4px;}
+    .form-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+    .rem-label{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);cursor:pointer;}
+    .rem-cb{width:15px;height:15px;border:1.5px solid var(--border);border-radius:3px;appearance:none;background:white;cursor:pointer;position:relative;transition:all .15s;flex-shrink:0;}
+    .rem-cb:checked{background:var(--amber);border-color:var(--amber);}
+    .rem-cb:checked::after{content:'✓';position:absolute;top:-1px;left:1px;font-size:10px;color:white;}
+    .sub-btn{width:100%;padding:14px;background:var(--ink);color:var(--paper);border:none;border-radius:5px;font-family:'Playfair Display',serif;font-size:17px;font-weight:700;cursor:pointer;transition:all .22s;display:flex;align-items:center;justify-content:center;gap:10px;position:relative;overflow:hidden;}
+    .sub-btn::before{content:'';position:absolute;inset:0;background:var(--amber);transform:translateX(-100%);transition:transform .3s ease;}
+    .sub-btn:hover:not(:disabled)::before{transform:translateX(0);}
+    .sub-btn span{position:relative;z-index:1;}
+    .sub-btn:hover:not(:disabled){box-shadow:0 8px 28px rgba(200,134,10,.35);}
+    .sub-btn:disabled{opacity:.55;cursor:not-allowed;}
+    .btn-spin{width:15px;height:15px;border:2px solid rgba(250,247,242,.3);border-top-color:var(--paper);border-radius:50%;animation:spin .75s linear infinite;position:relative;z-index:1;}
+    .success-banner{margin-top:14px;padding:12px 16px;background:rgba(61,90,71,.08);border:1px solid rgba(61,90,71,.2);border-radius:5px;display:flex;align-items:center;gap:10px;font-size:15px;color:var(--sage);animation:slideUp .3s ease both;}
+    .or-div{display:flex;align-items:center;gap:12px;margin:18px 0;}
+    .or-line{flex:1;height:1px;background:var(--border);}
+    .or-text{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+    .soc-row{display:flex;gap:10px;}
+    .soc-btn{flex:1;padding:10px;border:1px solid var(--border);border-radius:5px;background:white;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px;}
+    .soc-btn:hover{border-color:var(--amber);color:var(--ink);background:var(--aged);}
+    .bottom-sw{margin-top:20px;text-align:center;font-size:15px;color:var(--muted);}
+    .bottom-sw button{background:none;border:none;color:var(--amber);font-family:'Crimson Pro',serif;font-size:15px;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+    .server-bar{background:rgba(61,90,71,.07);border:1px solid rgba(61,90,71,.15);border-radius:5px;padding:9px 14px;margin-bottom:18px;display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--sage);letter-spacing:1px;}
+    .server-dot{width:6px;height:6px;border-radius:50%;background:var(--sage);box-shadow:0 0 6px var(--sage);animation:pulse 2s infinite;}
+    .server-bar.offline{background:rgba(139,58,26,.07);border-color:rgba(139,58,26,.2);color:var(--rust);}
+    .server-bar.offline .server-dot{background:var(--rust);box-shadow:0 0 6px var(--rust);animation:none;}
+    .err-panel{border:1px solid rgba(139,58,26,.3);border-radius:8px;padding:14px 18px;background:rgba(139,58,26,.04);display:flex;gap:12px;align-items:flex-start;margin-bottom:16px;}
+    .err-text{font-size:15px;color:var(--rust);line-height:1.6;}
+
+    /* ── APP SHELL ── */
+    .app-bg{min-height:100vh;background:var(--paper);background-image:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(200,134,10,.05) 0%,transparent 70%);}
+    .app-header{border-bottom:1px solid var(--border);padding:0 36px;display:flex;align-items:center;justify-content:space-between;height:64px;background:rgba(250,247,242,.92);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;}
+    .logo-mark{font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:var(--ink);letter-spacing:-.5px;}
+    .logo-mark span{color:var(--amber);}
+    .header-nav{display:flex;align-items:center;gap:4px;}
+    .nav-btn{padding:7px 16px;border:none;border-radius:4px;background:transparent;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:all .15s;}
+    .nav-btn:hover,.nav-btn.active{background:var(--aged);color:var(--ink);}
+    .nav-btn.active{color:var(--amber);}
+    .user-avatar{width:34px;height:34px;border-radius:50%;background:var(--amber);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:white;}
+    .user-name{font-family:'Crimson Pro',serif;font-size:15px;color:var(--ink);font-weight:600;}
+    .sign-out-btn{padding:6px 14px;border:1px solid var(--border);border-radius:4px;background:transparent;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:all .15s;}
+    .sign-out-btn:hover{border-color:var(--rust);color:var(--rust);}
+    .header-badge{display:flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid var(--border);border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--sage);background:var(--aged);}
+    .badge-dot{width:6px;height:6px;border-radius:50%;background:var(--sage);box-shadow:0 0 6px var(--sage);animation:pulse 2s infinite;}
+
+    /* ── SUMMARIZER ── */
+    .hero{padding:60px 36px 44px;max-width:860px;margin:0 auto;}
+    .hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--amber);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+    .hero-eyebrow::after{content:'';flex:1;max-width:60px;height:1px;background:var(--amber);}
+    .hero-title{font-family:'Playfair Display',serif;font-size:clamp(36px,6vw,62px);font-weight:900;line-height:1.05;letter-spacing:-2px;margin-bottom:16px;}
+    .hero-title em{font-style:italic;color:var(--amber);}
+    .hero-sub{font-size:17px;line-height:1.7;color:var(--muted);max-width:520px;font-weight:300;}
+    .workspace{max-width:860px;margin:0 auto;padding:0 36px 80px;}
+    .meta-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+    .fld{display:flex;flex-direction:column;gap:5px;}
+    .fld-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);}
+    .fld-input{padding:10px 13px;border:1px solid var(--border);border-radius:4px;background:white;font-family:'Crimson Pro',serif;font-size:15px;color:var(--ink);outline:none;transition:border-color .2s,box-shadow .2s;}
+    .fld-input:focus{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-glow);}
+    .fld-input::placeholder{color:var(--muted);opacity:.4;}
+    .input-panel{border:1px solid var(--border);border-radius:8px;background:white;overflow:hidden;margin-bottom:22px;box-shadow:var(--shadow);}
+    .panel-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--aged);}
+    .tab-btn{padding:12px 22px;border:none;background:transparent;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:all .2s;border-bottom:2px solid transparent;margin-bottom:-1px;}
+    .tab-btn.active{color:var(--ink);border-bottom-color:var(--amber);background:white;}
+    .text-area{width:100%;min-height:220px;padding:20px;border:none;resize:vertical;font-family:'Crimson Pro',serif;font-size:16px;line-height:1.8;color:var(--ink);outline:none;background:white;}
+    .text-area::placeholder{color:var(--muted);opacity:.38;}
+    .upload-zone{min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;cursor:pointer;background:white;transition:background .2s;}
+    .upload-zone:hover{background:rgba(200,134,10,.03);}
+    .upload-icon{width:52px;height:52px;border:2px dashed var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--muted);transition:all .2s;}
+    .upload-zone:hover .upload-icon{border-color:var(--amber);color:var(--amber);}
+    .upload-title{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:var(--ink);}
+    .upload-sub{font-size:13px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+    .file-pill{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--sage);padding:4px 12px;background:rgba(61,90,71,.08);border-radius:20px;border:1px solid rgba(61,90,71,.2);}
+    .char-count{padding:7px 15px;border-top:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);background:var(--aged);display:flex;justify-content:space-between;}
+    .controls-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:22px;}
+    .ctrl-card{border:1px solid var(--border);border-radius:8px;padding:14px;background:white;}
+    .ctrl-title{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+    .opt-group{display:flex;flex-direction:column;gap:5px;}
+    .opt-btn{padding:7px 11px;border:1px solid var(--border);border-radius:4px;background:transparent;font-family:'Crimson Pro',serif;font-size:14px;color:var(--muted);cursor:pointer;transition:all .15s;text-align:left;}
+    .opt-btn.selected{background:var(--amber-glow);border-color:var(--amber);color:var(--ink);}
+    .opt-btn:hover:not(.selected){border-color:var(--ink);color:var(--ink);}
+    .api-key-row{display:flex;gap:12px;margin-bottom:22px;align-items:flex-end;}
+    .api-input{flex:1;padding:10px 13px;border:1px solid var(--border);border-radius:4px;background:white;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink);outline:none;transition:border-color .2s;}
+    .api-input:focus{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-glow);}
+    .api-input::placeholder{opacity:.4;}
+    .submit-area{display:flex;align-items:center;gap:14px;margin-bottom:32px;}
+    .gen-btn{padding:13px 30px;background:var(--ink);color:var(--paper);border:none;border-radius:4px;font-family:'Playfair Display',serif;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:9px;}
+    .gen-btn:hover:not(:disabled){background:var(--amber);transform:translateY(-1px);box-shadow:0 6px 24px rgba(200,134,10,.3);}
+    .gen-btn:disabled{opacity:.5;cursor:not-allowed;}
+    .submit-hint{font-size:13px;color:var(--muted);font-family:'JetBrains Mono',monospace;line-height:1.5;}
+    .loading-panel{border:1px solid var(--border);border-radius:8px;padding:44px;text-align:center;background:white;margin-bottom:28px;}
+    .loader-ring{width:52px;height:52px;border:3px solid var(--aged);border-top-color:var(--amber);border-radius:50%;animation:spin .9s linear infinite;margin:0 auto 20px;}
+    .loading-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;margin-bottom:6px;color:var(--ink);}
+    .loading-sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+    .result-panel{border:1px solid var(--border);border-radius:8px;background:white;overflow:hidden;box-shadow:var(--shadow);animation:slideUp .4s ease;}
+    .result-header{padding:18px 26px;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+    .result-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--amber-light);margin-bottom:3px;}
+    .result-book-name{font-family:'Playfair Display',serif;font-size:19px;font-weight:700;font-style:italic;}
+    .result-actions{display:flex;gap:8px;flex-wrap:wrap;}
+    .act-btn{padding:7px 14px;border:1px solid rgba(250,247,242,.2);border-radius:4px;background:transparent;color:var(--paper);font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .15s;}
+    .act-btn:hover{background:rgba(250,247,242,.1);border-color:var(--amber-light);}
+    .act-btn.copied,.act-btn.saved{border-color:var(--amber-light);color:var(--amber-light);}
+    .result-meta-strip{padding:8px 26px;background:var(--aged);border-bottom:1px solid var(--border);display:flex;gap:18px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);flex-wrap:wrap;}
+    .meta-pill{display:flex;align-items:center;gap:5px;}
+    .meta-pill span:first-child{color:var(--amber);}
+    .result-body{padding:30px 34px;}
+    .summary-text{font-family:'Crimson Pro',serif;font-size:17px;line-height:1.9;color:var(--ink);}
+    .summary-text p{margin-bottom:16px;}
+    .summary-text ul{padding-left:22px;}
+    .summary-text li{margin-bottom:9px;}
+    .key-themes{margin-top:26px;padding-top:20px;border-top:1px solid var(--border);}
+    .themes-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--amber);margin-bottom:10px;}
+    .themes-row{display:flex;flex-wrap:wrap;gap:7px;}
+    .theme-chip{padding:4px 13px;background:var(--aged);border:1px solid var(--border);border-radius:20px;font-family:'Crimson Pro',serif;font-size:13px;color:var(--muted);}
+    .orn-div{text-align:center;margin:40px 0 32px;position:relative;}
+    .orn-div::before{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:var(--border);}
+    .orn-div span{position:relative;background:var(--paper);padding:0 18px;font-family:'Playfair Display',serif;font-size:20px;color:var(--amber);letter-spacing:8px;}
+
+    /* ── LIBRARY ── */
+    .lib-hero{padding:52px 36px 36px;max-width:860px;margin:0 auto;}
+    .library{max-width:860px;margin:0 auto;padding:0 36px 80px;}
+    .lib-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:32px;}
+    .stat-card{border:1px solid var(--border);border-radius:8px;padding:20px 22px;background:white;box-shadow:var(--shadow);}
+    .stat-num{font-family:'Playfair Display',serif;font-size:36px;font-weight:900;color:var(--amber);line-height:1;}
+    .stat-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:5px;}
+    .lib-grid{display:flex;flex-direction:column;gap:12px;}
+    .lib-card{border:1px solid var(--border);border-radius:8px;background:white;overflow:hidden;transition:box-shadow .2s;cursor:pointer;}
+    .lib-card:hover{box-shadow:var(--shadow);}
+    .lib-card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;background:var(--aged);}
+    .lib-book-title{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;font-style:italic;color:var(--ink);}
+    .lib-book-author{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-top:3px;}
+    .lib-card-meta{display:flex;align-items:center;gap:8px;}
+    .lib-meta-tag{padding:3px 10px;background:var(--amber-glow);border:1px solid rgba(200,134,10,.2);border-radius:12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--amber);}
+    .lib-del-btn{padding:5px 10px;border:1px solid var(--border);border-radius:4px;background:transparent;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;transition:all .15s;}
+    .lib-del-btn:hover{border-color:var(--rust);color:var(--rust);}
+    .lib-card-body{padding:14px 18px;}
+    .lib-excerpt{font-family:'Crimson Pro',serif;font-size:15px;line-height:1.7;color:var(--muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+    .lib-card-footer{padding:10px 18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
+    .lib-themes{display:flex;gap:6px;flex-wrap:wrap;padding:0 18px 12px;}
+    .empty-lib{text-align:center;padding:70px 20px;}
+    .empty-icon{font-size:48px;margin-bottom:18px;opacity:.4;}
+    .empty-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--ink);margin-bottom:8px;}
+    .empty-sub{font-size:16px;color:var(--muted);line-height:1.6;max-width:360px;margin:0 auto 22px;}
+    .empty-cta{padding:12px 28px;background:var(--ink);color:var(--paper);border:none;border-radius:4px;font-family:'Playfair Display',serif;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;}
+    .empty-cta:hover{background:var(--amber);}
+    .modal-overlay{position:fixed;inset:0;background:rgba(13,11,7,.6);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;animation:fadeIn .2s ease;}
+    .modal-box{background:var(--paper);border-radius:10px;width:100%;max-width:680px;max-height:85vh;overflow:auto;box-shadow:0 32px 80px rgba(13,11,7,.25);animation:slideUp .25s ease;}
+    .modal-header{padding:20px 26px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;background:var(--ink);color:var(--paper);}
+    .modal-body{padding:26px;}
+    .modal-close{background:none;border:none;color:rgba(250,247,242,.6);font-size:20px;cursor:pointer;}
+    .modal-text{font-family:'Crimson Pro',serif;font-size:17px;line-height:1.9;color:var(--ink);}
+    .modal-text p{margin-bottom:14px;}
+    .modal-text ul{padding-left:22px;}
+    .modal-text li{margin-bottom:8px;}
+    .toast{position:fixed;bottom:28px;right:28px;padding:13px 18px;background:var(--ink);color:var(--paper);border-left:3px solid var(--amber);border-radius:4px;font-family:'Crimson Pro',serif;font-size:15px;box-shadow:0 8px 32px rgba(13,11,7,.2);animation:toastIn .3s ease both;z-index:9999;max-width:300px;line-height:1.4;}
+    .app-footer{border-top:1px solid var(--border);padding:18px 36px;display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);background:var(--aged);flex-wrap:wrap;gap:8px;}
+    .splash{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--ink);}
+    .splash-logo{font-family:'Playfair Display',serif;font-size:40px;font-weight:900;color:var(--paper);letter-spacing:-1px;margin-bottom:24px;text-align:center;}
+    .splash-logo span{color:var(--amber);}
+    .splash-spin{width:36px;height:36px;border:2px solid rgba(250,247,242,.2);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto;}
+    @media(max-width:720px){
+      .lp{grid-template-columns:1fr;} .lp-left{display:none;} .lp-right{padding:36px 24px;min-height:100vh;}
+      .hero,.workspace,.lib-hero,.library{padding-left:18px;padding-right:18px;}
+      .controls-row,.meta-row{grid-template-columns:1fr;} .name-row{grid-template-columns:1fr;}
+      .result-header,.app-header{flex-wrap:wrap;height:auto;padding:12px 18px;}
+      .lib-stats{grid-template-columns:1fr 1fr;} .user-name,.header-badge{display:none;}
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+  const { useState, useEffect, useRef, useCallback } = React;
+
+  // ── API BASE ── Change this if backend runs on a different port ──────────
+  const API = "http://localhost:5000/api";
+
+  // ── HTTP helpers ─────────────────────────────────────────────────────────
+  function getToken()     { return localStorage.getItem("lexis_token") || ""; }
+  function setToken(t)    { t ? localStorage.setItem("lexis_token", t) : localStorage.removeItem("lexis_token"); }
+  function getApiKey()    { return localStorage.getItem("lexis_apikey") || ""; }
+  function setApiKey(k)   { localStorage.setItem("lexis_apikey", k); }
+
+  async function api(method, path, body) {
+    const opts = {
+      method,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` }
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(API + path, opts);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Request failed");
+    return data;
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function validate(mode, form) {
+    const e = {};
+    if (mode === "signup") {
+      if (!form.firstName.trim()) e.firstName = "Required";
+      if (!form.lastName.trim())  e.lastName  = "Required";
+    }
+    if (!form.email.trim())     e.email    = "Email required";
+    else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Invalid email";
+    if (!form.password)         e.password = "Required";
+    else if (form.password.length < 6) e.password = "Min. 6 chars";
+    if (mode === "signup" && form.password !== form.confirm) e.confirm = "Passwords don't match";
+    return e;
+  }
+
+  function FormatSummary({ text }) {
+    if (!text) return null;
+    return text.split("\n\n").map((para, i) => {
+      if (/^[•\-\*]/.test(para.trim())) {
+        const items = para.split("\n").filter(l => l.trim());
+        return <ul key={i}>{items.map((it, j) => <li key={j}>{it.replace(/^[•\-\*]\s*/,"")}</li>)}</ul>;
+      }
+      return <p key={i}>{para}</p>;
+    });
+  }
+
+  function Toast({ msg }) { return msg ? <div className="toast">{msg}</div> : null; }
+
+  // ════════════════════════════════════════════════════════════════════════
+  //  LOGIN PAGE
+  // ════════════════════════════════════════════════════════════════════════
+  function LoginPage({ onAuth }) {
+    const [mode, setMode]   = useState("login");
+    const [form, setForm]   = useState({ firstName:"",lastName:"",email:"",password:"",confirm:"" });
+    const [errors, setErrors] = useState({});
+    const [showPw, setShowPw] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [success, setSuccess] = useState(false);
+    const [apiErr, setApiErr]   = useState("");
+    const [serverOk, setServerOk] = useState(null);
+
+    useEffect(() => {
+      fetch(API + "/health").then(r => r.ok ? setServerOk(true) : setServerOk(false)).catch(() => setServerOk(false));
+    }, []);
+
+    const set = k => e => setForm(f => ({...f, [k]: e.target.value}));
+    const switchMode = m => { setMode(m); setErrors({}); setSuccess(false); setApiErr(""); setForm({firstName:"",lastName:"",email:"",password:"",confirm:""}); };
+
+    const handleSubmit = async () => {
+      const errs = validate(mode, form);
+      if (Object.keys(errs).length) { setErrors(errs); return; }
+      setErrors({}); setApiErr(""); setLoading(true);
+      try {
+        const endpoint = mode === "signup" ? "/auth/register" : "/auth/login";
+        const data = await api("POST", endpoint, {
+          firstName: form.firstName, lastName: form.lastName,
+          email: form.email, password: form.password
+        });
+        setToken(data.token);
+        setSuccess(true);
+        setTimeout(() => onAuth({ ...data.user, token: data.token }), 600);
+      } catch (err) {
+        setApiErr(err.message);
+      } finally { setLoading(false); }
+    };
+
+    const FEATS = ["AI-powered summaries via Python backend","SQLite database — full persistence","JWT token authentication","Personal library across all sessions"];
+
+    return (
+      <div className="lp">
+        <div className="lp-left">
+          <div className="lp-grain"/><div className="lp-glow"/>
+          <div style={{position:"relative",zIndex:2}}>
+            <div className="lp-logo-word">Lexi<span>s</span></div>
+            <div className="lp-logo-tag">Book Intelligence Platform</div>
+          </div>
+          <div style={{position:"relative",zIndex:2}}>
+            <span className="lp-quote-mark">"</span>
+            <p className="lp-quote-text">A reader lives a thousand lives before he dies.</p>
+            <div className="lp-quote-author">— George R.R. Martin</div>
+          </div>
+          <div className="lp-features">
+            {FEATS.map((f,i)=><div key={i} className="lp-feat"><div className="lp-feat-dot"/><div className="lp-feat-text">{f}</div></div>)}
+          </div>
+        </div>
+        <div className="lp-right">
+          <div className="lp-corner"/>
+          <div className="form-card">
+            <div className="fc-eyebrow">{mode==="login"?"Welcome back":"Get started"}</div>
+            <h1 className="fc-title">{mode==="login"?<React.Fragment>Sign in to <em>Lexis</em></React.Fragment>:<React.Fragment>Create your <em>account</em></React.Fragment>}</h1>
+            <p className="fc-sub">{mode==="login"?"Continue your reading intelligence journey.":"Join readers distilling books into insights."}</p>
+
+            <div className={`server-bar ${serverOk===false?"offline":""}`}>
+              <div className="server-dot"/>
+              {serverOk===null?"Checking Python server…":serverOk?"Python + SQLite server connected":"⚠ Server offline — run: python app.py"}
+            </div>
+
+            <div className="tab-sw">
+              <button className={`tab-sw-btn ${mode==="login"?"active":""}`} onClick={()=>switchMode("login")}>Sign In</button>
+              <button className={`tab-sw-btn ${mode==="signup"?"active":""}`} onClick={()=>switchMode("signup")}>Sign Up</button>
+            </div>
+
+            <div className="fields">
+              {mode==="signup"&&(
+                <div className="name-row">
+                  {[["firstName","👤","Ada"],["lastName","👤","Lovelace"]].map(([k,ic,ph])=>(
+                    <div className="fl" key={k}>
+                      <label className="fl-label">{k==="firstName"?"First Name":"Last Name"}</label>
+                      <div className="fi-wrap"><span className="fi-icon">{ic}</span>
+                        <input className="fi" placeholder={ph} value={form[k]} onChange={set(k)}/>
+                      </div>
+                      {errors[k]&&<div className="fi-err">⚠ {errors[k]}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="fl">
+                <label className="fl-label">Email</label>
+                <div className="fi-wrap"><span className="fi-icon">✉</span>
+                  <input className="fi" type="email" placeholder="you@example.com" value={form.email} onChange={set("email")}/>
+                </div>
+                {errors.email&&<div className="fi-err">⚠ {errors.email}</div>}
+              </div>
+              <div className="fl">
+                <label className="fl-label">Password</label>
+                <div className="fi-wrap"><span className="fi-icon">🔒</span>
+                  <input className="fi" type={showPw?"text":"password"} placeholder="••••••••" value={form.password} onChange={set("password")} style={{paddingRight:42}}/>
+                  <button className="fi-eye" onClick={()=>setShowPw(p=>!p)}>{showPw?"🙈":"👁"}</button>
+                </div>
+                {errors.password&&<div className="fi-err">⚠ {errors.password}</div>}
+              </div>
+              {mode==="signup"&&(
+                <div className="fl">
+                  <label className="fl-label">Confirm Password</label>
+                  <div className="fi-wrap"><span className="fi-icon">🔑</span>
+                    <input className="fi" type={showPw?"text":"password"} placeholder="••••••••" value={form.confirm} onChange={set("confirm")}/>
+                  </div>
+                  {errors.confirm&&<div className="fi-err">⚠ {errors.confirm}</div>}
+                </div>
+              )}
+            </div>
+
+            {apiErr&&<div className="err-panel"><span>⚠</span><div className="err-text">{apiErr}</div></div>}
+
+            <button className="sub-btn" onClick={handleSubmit} disabled={loading||success||serverOk===false}>
+              {loading?<React.Fragment><div className="btn-spin"/><span>Verifying…</span></React.Fragment>
+                :success?<span>✦ {mode==="login"?"Signed In":"Account Created"}</span>
+                :<span>{mode==="login"?"Sign In to Lexis":"Create Account"}</span>}
+            </button>
+
+            {success&&<div className="success-banner"><span>✦</span><span>Redirecting…</span></div>}
+
+            <div className="or-div"><div className="or-line"/><div className="or-text">or continue with</div><div className="or-line"/></div>
+            <div className="soc-row">
+              {[["G","Google"],["🍎","Apple"],["in","LinkedIn"]].map(([ic,lbl])=>(
+                <button key={lbl} className="soc-btn"><span style={{fontSize:14}}>{ic}</span>{lbl}</button>
+              ))}
+            </div>
+            <div className="bottom-sw">
+              {mode==="login"?<React.Fragment>No account? <button onClick={()=>switchMode("signup")}>Sign up free</button></React.Fragment>
+                :<React.Fragment>Have an account? <button onClick={()=>switchMode("login")}>Sign in</button></React.Fragment>}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  //  SUMMARIZER
+  // ════════════════════════════════════════════════════════════════════════
+  function SummarizerPage({ user, onSaved, showToast }) {
+    const [tab,setTab]               = useState("paste");
+    const [inputText,setInputText]   = useState("");
+    const [fileName,setFileName]     = useState("");
+    const [title,setTitle]           = useState("");
+    const [author,setAuthor]         = useState("");
+    const [summaryLen,setSummaryLen] = useState("medium");
+    const [summaryStyle,setSummaryStyle] = useState("paragraphs");
+    const [summaryFocus,setSummaryFocus] = useState("balanced");
+    const [apiKey,setApiKeyState]    = useState(getApiKey());
+    const [loading,setLoading]       = useState(false);
+    const [result,setResult]         = useState(null);
+    const [error,setError]           = useState("");
+    const [copied,setCopied]         = useState(false);
+    const fileRef = useRef();
+
+    const wordCount = inputText.trim().split(/\s+/).filter(Boolean).length;
+
+    const handleFile = useCallback(file => {
+      if (!file) return;
+      if (!file.name.match(/\.(txt|md)$/i)) { setError("Upload a .txt or .md file."); return; }
+      setError(""); setFileName(file.name);
+      const r = new FileReader(); r.onload = e => setInputText(e.target.result); r.readAsText(file);
+    },[]);
+
+    const handleSummarize = async () => {
+      if (!apiKey) { setError("Enter your Anthropic API key above."); return; }
+      const text = inputText.trim();
+      if (!text || text.split(/\s+/).length < 30) { setError("Provide at least 30 words."); return; }
+      setError(""); setResult(null); setLoading(true);
+      try {
+        const data = await api("POST", "/summaries", {
+          text, title, author,
+          style: summaryStyle, lengthPref: summaryLen, focus: summaryFocus,
+          apiKey
+        });
+        setApiKey(apiKey); setApiKeyState(apiKey);
+        setResult(data);
+        onSaved && onSaved();
+      } catch(err) { setError("Failed: " + err.message); }
+      finally { setLoading(false); }
+    };
+
+    const handleCopy = () => { if (result) { navigator.clipboard.writeText(result.summaryText); setCopied(true); setTimeout(()=>setCopied(false),2000); } };
+    const handleDownload = () => {
+      if (!result) return;
+      const blob = new Blob([result.summaryText],{type:"text/plain"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href=url; a.download=`${(result.bookTitle||"summary").replace(/\s+/g,"_")}_summary.txt`; a.click(); URL.revokeObjectURL(url);
+    };
+
+    const lenOpts   = [{v:"short",l:"Short — ~100 words"},{v:"medium",l:"Medium — ~250 words"},{v:"long",l:"Long — ~500 words"}];
+    const styleOpts = [{v:"paragraphs",l:"Prose paragraphs"},{v:"bullets",l:"Bullet points"},{v:"narrative",l:"Narrative arc"}];
+    const focusOpts = [{v:"balanced",l:"Balanced overview"},{v:"themes",l:"Themes & ideas"},{v:"plot",l:"Plot & events"}];
+
+    return (
+      <div className="app-bg">
+        <div className="hero">
+          <div className="hero-eyebrow">Intelligent Summarization</div>
+          <h1 className="hero-title">Distil books into<br/><em>essential insights</em></h1>
+          <p className="hero-sub">Paste text or upload a file. Python backend calls Claude AI and stores your summaries in SQLite.</p>
+        </div>
+        <div className="workspace">
+          <div className="api-key-row">
+            <div className="fld" style={{flex:1}}>
+              <label className="fld-label">🔑 Anthropic API Key</label>
+              <input className="api-input" type="password" placeholder="sk-ant-api03-…" value={apiKey} onChange={e=>{setApiKeyState(e.target.value);setApiKey(e.target.value);}}/>
+            </div>
+          </div>
+          <div className="meta-row">
+            <div className="fld"><label className="fld-label">Book Title</label><input className="fld-input" placeholder="e.g. The Great Gatsby" value={title} onChange={e=>setTitle(e.target.value)}/></div>
+            <div className="fld"><label className="fld-label">Author</label><input className="fld-input" placeholder="e.g. F. Scott Fitzgerald" value={author} onChange={e=>setAuthor(e.target.value)}/></div>
+          </div>
+
+          <div className="input-panel">
+            <div className="panel-tabs">
+              <button className={`tab-btn ${tab==="paste"?"active":""}`} onClick={()=>setTab("paste")}>✏ Paste Text</button>
+              <button className={`tab-btn ${tab==="upload"?"active":""}`} onClick={()=>setTab("upload")}>📄 Upload File</button>
+            </div>
+            {tab==="paste"
+              ?<textarea className="text-area" placeholder="Paste your book text here…" value={inputText} onChange={e=>setInputText(e.target.value)}/>
+              :<div className="upload-zone" onClick={()=>fileRef.current.click()} onDragOver={e=>{e.preventDefault();}} onDrop={e=>{e.preventDefault();handleFile(e.dataTransfer.files[0]);}}>
+                <input ref={fileRef} type="file" accept=".txt,.md" style={{display:"none"}} onChange={e=>handleFile(e.target.files[0])}/>
+                <div className="upload-icon">⬆</div>
+                {fileName?<React.Fragment><div className="upload-title">File loaded</div><div className="file-pill">📄 {fileName}</div></React.Fragment>
+                  :<React.Fragment><div className="upload-title">Drop your file here</div><div className="upload-sub">Supports .txt and .md</div></React.Fragment>}
+              </div>}
+            <div className="char-count"><span>{wordCount.toLocaleString()} words</span><span>{wordCount>100?"✓ Ready":"Add more text"}</span></div>
+          </div>
+
+          <div className="controls-row">
+            {[[lenOpts,summaryLen,setSummaryLen,"Summary Length"],[styleOpts,summaryStyle,setSummaryStyle,"Output Style"],[focusOpts,summaryFocus,setSummaryFocus,"Analysis Focus"]].map(([opts,val,setter,label])=>(
+              <div className="ctrl-card" key={label}>
+                <div className="ctrl-title">{label}</div>
+                <div className="opt-group">{opts.map(o=><button key={o.v} className={`opt-btn ${val===o.v?"selected":""}`} onClick={()=>setter(o.v)}>{o.l}</button>)}</div>
+              </div>
+            ))}
+          </div>
+
+          {error&&<div className="err-panel" style={{marginBottom:18}}><span>⚠</span><div className="err-text">{error}</div></div>}
+
+          <div className="submit-area">
+            <button className="gen-btn" onClick={handleSummarize} disabled={loading||!inputText.trim()}>
+              {loading?"Analysing…":"✦ Generate Summary"}
+            </button>
+            <div className="submit-hint">Python → Claude AI → SQLite<br/>~5–15 seconds</div>
+          </div>
+
+          {loading&&<div className="loading-panel"><div className="loader-ring"/><div className="loading-title">Python backend calling Claude…</div><div className="loading-sub">Processing · Summarising · Saving</div></div>}
+
+          {result&&!loading&&(
+            <React.Fragment>
+              <div className="orn-div"><span>✦ ✦ ✦</span></div>
+              <div className="result-panel">
+                <div className="result-header">
+                  <div>
+                    <div className="result-label">Summary saved to SQLite Database</div>
+                    <div className="result-book-name">{result.bookTitle}{result.bookAuthor?` — ${result.bookAuthor}`:""}</div>
+                  </div>
+                  <div className="result-actions">
+                    <button className={`act-btn ${copied?"copied":""}`} onClick={handleCopy}>{copied?"✓ Copied":"⎘ Copy"}</button>
+                    <button className="act-btn" onClick={handleDownload}>↓ Export</button>
+                  </div>
+                </div>
+                <div className="result-meta-strip">
+                  <div className="meta-pill"><span>◈</span><span>{result.wordCount} words</span></div>
+                  <div className="meta-pill"><span>◈</span><span>{result.style}</span></div>
+                  <div className="meta-pill"><span>◈</span><span>id: {result.id}</span></div>
+                  <div className="meta-pill"><span>◈</span><span>{new Date(result.createdAt).toLocaleTimeString()}</span></div>
+                </div>
+                <div className="result-body">
+                  <div className="summary-text"><FormatSummary text={result.summaryText}/></div>
+                  {result.themes?.length>0&&<div className="key-themes">
+                    <div className="themes-label">Detected Themes</div>
+                    <div className="themes-row">{result.themes.map(t=><div key={t} className="theme-chip">{t}</div>)}</div>
+                  </div>}
+                </div>
+              </div>
+            </React.Fragment>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  //  LIBRARY
+  // ════════════════════════════════════════════════════════════════════════
+  function LibraryPage({ refreshKey, onNewSummary }) {
+    const [summaries,setSummaries] = useState([]);
+    const [loading,setLoading]     = useState(true);
+    const [selected,setSelected]   = useState(null);
+
+    const load = useCallback(async () => {
+      setLoading(true);
+      try { const data = await api("GET","/summaries"); setSummaries(data); }
+      catch { setSummaries([]); }
+      finally { setLoading(false); }
+    },[]);
+
+    useEffect(()=>{ load(); },[load, refreshKey]);
+
+    const handleDelete = async (id, e) => {
+      e.stopPropagation();
+      try { await api("DELETE",`/summaries/${id}`); setSummaries(s=>s.filter(x=>x.id!==id)); }
+      catch(err) { alert(err.message); }
+    };
+
+    const totalWords = summaries.reduce((a,s)=>a+(s.wordCount||0),0);
+
+    if (loading) return <div className="app-bg"><div className="lib-hero"><div className="loading-panel" style={{marginTop:40}}><div className="loader-ring"/><div className="loading-title">Loading library…</div></div></div></div>;
+
+    return (
+      <div className="app-bg">
+        <div className="lib-hero">
+          <div className="hero-eyebrow">Your Collection</div>
+          <h1 className="hero-title" style={{marginBottom:8}}><em>Reading</em> Library</h1>
+          <p className="hero-sub">All summaries stored in SQLite database on your server.</p>
+        </div>
+        <div className="library">
+          <div className="lib-stats">
+            <div className="stat-card"><div className="stat-num">{summaries.length}</div><div className="stat-label">Summaries</div></div>
+            <div className="stat-card"><div className="stat-num">{totalWords.toLocaleString()}</div><div className="stat-label">Words Distilled</div></div>
+            <div className="stat-card"><div className="stat-num">{new Set(summaries.map(s=>s.bookId)).size}</div><div className="stat-label">Unique Books</div></div>
+          </div>
+
+          {summaries.length===0
+            ?<div className="empty-lib">
+               <div className="empty-icon">📚</div>
+               <div className="empty-title">Library is empty</div>
+               <p className="empty-sub">Generate summaries and they'll be saved here automatically.</p>
+               <button className="empty-cta" onClick={onNewSummary}>✦ Start Summarizing</button>
+             </div>
+            :<div className="lib-grid">
+               {summaries.map(s=>(
+                 <div className="lib-card" key={s.id} onClick={()=>setSelected(s)}>
+                   <div className="lib-card-header">
+                     <div>
+                       <div className="lib-book-title">{s.bookTitle||"Untitled"}</div>
+                       {s.bookAuthor&&<div className="lib-book-author">{s.bookAuthor}</div>}
+                     </div>
+                     <div className="lib-card-meta">
+                       <div className="lib-meta-tag">{s.style}</div>
+                       <button className="lib-del-btn" onClick={e=>handleDelete(s.id,e)}>✕</button>
+                     </div>
+                   </div>
+                   <div className="lib-card-body"><div className="lib-excerpt">{s.summaryText}</div></div>
+                   {s.themes?.length>0&&<div className="lib-themes">{s.themes.map(t=><div key={t} className="theme-chip" style={{fontSize:12,padding:"3px 10px"}}>{t}</div>)}</div>}
+                   <div className="lib-card-footer">
+                     <span>◈ {s.wordCount} words</span>
+                     <span>{new Date(s.createdAt).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}</span>
+                   </div>
+                 </div>
+               ))}
+             </div>}
+        </div>
+
+        {selected&&(
+          <div className="modal-overlay" onClick={()=>setSelected(null)}>
+            <div className="modal-box" onClick={e=>e.stopPropagation()}>
+              <div className="modal-header">
+                <div>
+                  <div className="result-label">Full Summary</div>
+                  <div className="result-book-name">{selected.bookTitle}{selected.bookAuthor?` — ${selected.bookAuthor}`:""}</div>
+                </div>
+                <button className="modal-close" onClick={()=>setSelected(null)}>✕</button>
+              </div>
+              <div className="modal-body">
+                <div className="modal-text"><FormatSummary text={selected.summaryText}/></div>
+                {selected.themes?.length>0&&<div className="key-themes" style={{marginTop:22,paddingTop:16,borderTop:"1px solid var(--border)"}}>
+                  <div className="themes-label">Themes</div>
+                  <div className="themes-row">{selected.themes.map(t=><div key={t} className="theme-chip">{t}</div>)}</div>
+                </div>}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  //  APP SHELL
+  // ════════════════════════════════════════════════════════════════════════
+  function AppShell({ session, onSignOut }) {
+    const [page,setPage]               = useState("summarize");
+    const [toast,setToast]             = useState("");
+    const [libRefresh,setLibRefresh]   = useState(0);
+
+    const showToast = msg => { setToast(msg); setTimeout(()=>setToast(""),3000); };
+
+    const handleSaved = () => { setLibRefresh(r=>r+1); showToast("✦ Summary saved to SQLite database"); };
+
+    const handleSignOut = async () => {
+      try { await api("POST","/auth/logout"); } catch {}
+      setToken(null);
+      onSignOut();
+    };
+
+    const initials = (session.firstName?.[0]||"")+(session.lastName?.[0]||"");
+
+    return (
+      <React.Fragment>
+        <header className="app-header">
+          <div style={{display:"flex",alignItems:"center",gap:24}}>
+            <div className="logo-mark">Lexi<span>s</span></div>
+            <nav className="header-nav">
+              <button className={`nav-btn ${page==="summarize"?"active":""}`} onClick={()=>setPage("summarize")}>✦ Summarize</button>
+              <button className={`nav-btn ${page==="library"?"active":""}`} onClick={()=>setPage("library")}>📚 Library</button>
+            </nav>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div className="header-badge"><div className="badge-dot"/>Python + SQLite</div>
+            <div className="user-avatar">{initials}</div>
+            <div className="user-name">{session.firstName}</div>
+            <button className="sign-out-btn" onClick={handleSignOut}>Sign Out</button>
+          </div>
+        </header>
+
+        {page==="summarize"
+          ?<SummarizerPage user={session} onSaved={handleSaved} showToast={showToast}/>
+          :<LibraryPage refreshKey={libRefresh} onNewSummary={()=>setPage("summarize")}/>}
+
+        <footer className="app-footer">
+          <span>LEXIS — Python Flask · SQLite · Claude AI</span>
+          <span>{session.email} · {session.role}</span>
+        </footer>
+        <Toast msg={toast}/>
+      </React.Fragment>
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  //  ROOT
+  // ════════════════════════════════════════════════════════════════════════
+  function App() {
+    const [session,setSession] = useState(null);
+    const [ready,setReady]     = useState(false);
+
+    useEffect(()=>{
+      const token = getToken();
+      if (token) {
+        api("GET","/auth/me").then(u=>{ setSession({...u,token}); setReady(true); }).catch(()=>{ setToken(null); setReady(true); });
+      } else { setReady(true); }
+    },[]);
+
+    if (!ready) return (
+      <div className="splash">
+        <div><div className="splash-logo">Lexi<span>s</span></div><div className="splash-spin"/></div>
+      </div>
+    );
+
+    if (!session) return <LoginPage onAuth={s=>setSession(s)}/>;
+    return <AppShell session={session} onSignOut={()=>setSession(null)}/>;
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
